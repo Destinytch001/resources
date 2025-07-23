@@ -14,7 +14,7 @@ import requests
 app = Flask(__name__)
 
 # Replace with your actual Mongo URI
-app.config["MONGO_URI"] = os.getenv("MONGO_URI", "mongodb+srv://username:password@cluster.mongodb.net/naits_db?retryWrites=true&w=majority")
+app.config["MONGO_URI"] = os.getenv("MONGO_URI", "mongodb+srv://destinytch:D45192091425Ea@cluster0.7mn5bki.mongodb.net/naits_db?retryWrites=true&w=majority&appName=Cluster0")
 mongo = PyMongo(app)
 db = mongo.db
 
