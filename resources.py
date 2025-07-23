@@ -276,8 +276,13 @@ def delete_resource(resource_id):
 
 
 # -----------------------------
-# ✅ Run Standalone Server
+# ✅ Run Standalone Server (Development)
 # -----------------------------
 if __name__ == '__main__':
     app.register_blueprint(resources_bp)
-    app.run(debug=True, port=5000)
+    
+    # Enable debug mode only in development
+    app.config["ENV"] = "development"
+    app.config["DEBUG"] = True
+
+    app.run(host='0.0.0.0', port=5000, debug=True)
