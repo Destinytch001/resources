@@ -1,34 +1,41 @@
+import os
 import datetime
-from flask import Blueprint, request, jsonify, send_file
+from flask import Flask, Blueprint, request, jsonify, send_file
+from flask_pymongo import PyMongo
 from bson import ObjectId
 from pymongo import DESCENDING
+from werkzeug.utils import secure_filename
 import cloudinary
 import cloudinary.uploader
-import requests
 from io import BytesIO
-import os
-from werkzeug.utils import secure_filename
-from extensions import db
+import requests
 
-resources_bp = Blueprint('resources_bp', __name__, url_prefix='/api/resources')
-resources_collection = db.resources
+# ----------------- INIT APP ------------------
+app = Flask(__name__)
 
-# ⚠️ In production, use environment variables instead
+# Replace with your actual Mongo URI
+app.config["MONGO_URI"] = os.getenv("MONGO_URI", "mongodb+srv://username:password@cluster.mongodb.net/naits_db?retryWrites=true&w=majority")
+mongo = PyMongo(app)
+db = mongo.db
+
+# ----------------- CLOUDINARY CONFIG ------------
 cloudinary.config(
     cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME", "dhndd1msa"),
     api_key=os.getenv("CLOUDINARY_API_KEY", "337382597786761"),
     api_secret=os.getenv("CLOUDINARY_API_SECRET", "bEJ0sWFZi8yYzeP5lzVl_rmUtX8")
 )
 
+# ----------------- BLUEPRINT ------------------
+resources_bp = Blueprint('resources_bp', __name__, url_prefix='/api/resources')
+resources_collection = db.resources
+
+# ----------------- HELPERS ------------------
 def serialize_resource(res):
     res['_id'] = str(res['_id'])
     return res
 
 def get_file_extension(file_type):
-    ext_map = {
-        'pdf': '.pdf', 'doc': '.doc',
-        'mp3': '.mp3', 'mp4': '.mp4', 'img': '.jpg'
-    }
+    ext_map = {'pdf': '.pdf', 'doc': '.doc', 'mp3': '.mp3', 'mp4': '.mp4', 'img': '.jpg'}
     return ext_map.get(file_type.lower(), '')
 
 def download_and_convert(url, original_filename, file_type):
@@ -44,6 +51,8 @@ def download_and_convert(url, original_filename, file_type):
         return file_data, filename
     except Exception as e:
         raise RuntimeError(f"Download error: {e}")
+
+# ----------------- ROUTES ------------------
 
 @resources_bp.route('/upload', methods=['POST'])
 def upload_resource():
@@ -92,12 +101,8 @@ def download_resource(resource_id):
             resource.get('original_filename', resource['title']),
             resource['file_type']
         )
-        return send_file(
-            file_data,
-            as_attachment=True,
-            download_name=filename,
-            mimetype=f"application/{resource['file_type']}"
-        )
+        return send_file(file_data, as_attachment=True, download_name=filename,
+                         mimetype=f"application/{resource['file_type']}")
     except Exception as e:
         return jsonify(success=False, error=f"Download failed: {e}"), 500
 
@@ -201,3 +206,10 @@ def delete_resource(resource_id):
         return jsonify(success=True, message='Deleted successfully'), 200
     except Exception as e:
         return jsonify(success=False, error=str(e)), 500
+
+# ----------------- REGISTER BLUEPRINT ------------------
+app.register_blueprint(resources_bp)
+
+# ----------------- MAIN ------------------
+if __name__ == '__main__':
+    app.run(debug=True)
